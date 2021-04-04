@@ -24,7 +24,7 @@ class Board extends Controller
         echo view('layout/header');
         echo view('board/write');
         echo view('layout/footer');
-    }
+    } 
 
     // 게시글 쓰기 컨트롤러
     public function process()
