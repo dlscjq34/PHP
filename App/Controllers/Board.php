@@ -10,12 +10,55 @@ class Board extends Controller
     // 게시판 컨트롤러
     public function board()
     {
-        $contents = $this->selectAll();
-        $bonus = "I'm bonus.";
-        $data = array('contents'=>$contents, 'bonus'=>$bonus);
+        $nowIndex = (isset($_GET['nowIndex']))?$_GET['nowIndex']:1;
+        $contentSize = 5;	// 화면 당 게시글 표시 갯수	
+        $startContent = ($nowIndex-1) * $contentSize; // 화면당 첫번째 행
+        $contents = $this->selectAll($startContent, $contentSize);
+        $totalCount = $this->totalCount();	// 총 행 갯수
+        $indexSize = 5;	// 화면 당 인덱스 수
+        $totalIndex = $totalCount/$indexSize + (($totalCount % $indexSize > 0) ? 1:0);
+        // $nowIndex % $indexSize >= 1 이면 $startIndex가 바뀐다.
+        // ex : 사이즈가 5 일 때 인덱스 5까지는 그대로, 인덱스가 6이 되면 바뀐다.
+        $startIndex = $nowIndex - (($nowIndex % $indexSize == 0)? $indexSize:($nowIndex % $indexSize)) +1; // 화면당 첫번째인덱스
+        $endIndex = $startIndex+$indexSize-1;	// 화면당 마지막인덱스
+        echo $startIndex.', '.$totalIndex.'<br>';
+        echo $endIndex.', '.$totalIndex;
+        $endIndex = ($endIndex > $totalIndex)? $totalIndex : $endIndex;	// 화면당 마지막인덱스
+
+        $data = array(
+            'contents'=>$contents,
+            'indexSize'=>$indexSize,
+            'startIndex'=>$startIndex,
+            'endIndex'=>$endIndex,
+            'totalIndex'=>$totalIndex,
+        );
         echo view('layout/header', $data);
         echo view('board/board');
         echo view('layout/footer');
+    }
+
+    // 게시글 리스트 읽어오기 DB 작업
+    public function selectAll($startContent, $contentSize)
+    {
+        $dbconn =  $this->dbConn();
+        $query =    "SELECT * FROM board
+                    ORDER BY id desc
+                    OFFSET $startContent ROWS
+                    FETCH NEXT $contentSize ROWS ONLY";
+
+        $stmt = sqlsrv_query($dbconn, $query);  // 쿼리를 실행하여 statement 를 얻어온다
+        $contents = array();
+        $i = 0;
+        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) // statement 를 돌면서 필드값을 가져온다
+        {
+            $contents[$i]['id'] = $row['id'];
+            $contents[$i]['title'] = $row['title'];
+            $contents[$i]['content'] = $row['content'];
+            $contents[$i]['regdate'] = $row['regdate'];
+            $i++;
+        }
+        $this->dbClose($stmt, $dbconn);
+        return $contents;
     }
 
     // 게시글폼 컨트롤러
@@ -35,25 +78,28 @@ class Board extends Controller
         $this->insert($query);
     }
 
-    // 게시글 리스트 읽어오기 DB 작업
-    public function selectAll()
+    // 게시글 총 갯수 읽어오기 DB 작업
+    public function totalCount()
     {
         $dbconn =  $this->dbConn();
-        $query = "select * from board order by id desc";
+        $query = "select count(*) from board";
         $stmt = sqlsrv_query($dbconn, $query);  // 쿼리를 실행하여 statement 를 얻어온다
-        $contents = array();
-        $i = 0;
-        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) // statement 를 돌면서 필드값을 가져온다
-        {
-            $contents[$i]['id'] = $row['id'];
-            $contents[$i]['title'] = $row['title'];
-            $contents[$i]['content'] = $row['content'];
-            $contents[$i]['regdate'] = $row['regdate'];
-            $i++;
+        if( $stmt === false ) {
+            die( print_r( sqlsrv_errors(), true));
         }
+       
+       // Make the first (and in this case, only) row of the result set available for reading.
+        if( sqlsrv_fetch( $stmt ) === false) {
+            die( print_r( sqlsrv_errors(), true));
+        }
+
+        $totalCount = sqlsrv_get_field($stmt, 0);
         $this->dbClose($stmt, $dbconn);
-        return $contents;
+        return $totalCount;
     }
+
+    
+    
 
     // 게시글 쓰기 DB 작업
     public function insert($_query)

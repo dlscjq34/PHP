@@ -1,8 +1,5 @@
-<?php
-	echo $bonus;
-?>
 <a href="Board/public/write">글쓰기</a>
-
+ 
 <table border="1">
 	<thead>
 		<tr align="center">
@@ -27,26 +24,27 @@
 	?>
 	</tbody>
 </table>
-<br>
-
-
-<?
-public function selectAll()
-    {
-        $dbconn =  $this->dbConn();
-        $query = "select * from board order by id desc";
-        $stmt = sqlsrv_query($dbconn, $query);  // 쿼리를 실행하여 statement 를 얻어온다
-        $contents = array();
-        $i = 0;
-        while ($row = sqlsrv_fetch_array($stmt, SQLSRV_FETCH_ASSOC)) // statement 를 돌면서 필드값을 가져온다
-        {
-            $contents[$i]['id'] = $row['id'];
-            $contents[$i]['title'] = $row['title'];
-            $contents[$i]['content'] = $row['content'];
-            $contents[$i]['regdate'] = $row['regdate'];
-            $i++;
-        }
-        $this->dbClose($stmt, $dbconn);
-        return $contents;
-    }
+<hr>
+<?php
+$i=$startIndex;
+if ($startIndex > 1) {
 ?>
+	<a href="Board/public/board?nowIndex=<?= $i-5; ?>">
+<?php	
+}
+?>
+		prev</a>
+
+<?php
+for ($i; $i <= $endIndex; $i++) { 
+?>
+	<a href="Board/public/board?nowIndex=<?= $i; ?>"><?= $i; ?></a>
+<?php
+}
+if ($endIndex < $totalIndex) {
+?>
+	<a href="Board/public/board?nowIndex=<?= $i; ?>">
+<?php
+}
+?>	
+		next</a>
